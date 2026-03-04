@@ -2,13 +2,14 @@
  * DynamicRoutes Component
  * 
  * Automatically generates routes from database modules without code changes.
- * Modules specify their component path in the database, and routes are
- * created dynamically at runtime.
+ * Modules specify their component path and route path in the database.
+ * Routes are created dynamically at runtime with full path flexibility.
  */
 
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Route } from 'react-router'
 import { useRBAC } from '@/contexts/RBACContext'
+import Layout from '@/components/Layout/Layout'
 
 // Component Registry
 // Register all available page components here
@@ -52,7 +53,7 @@ const DynamicRoutes = () => {
         return module.file_path && module.file_path in componentRegistry
       })
       .map(module => ({
-        path: module.route_path.replace('/dashboard', ''), // Remove /dashboard prefix
+        path: module.route_path, // Use route path as-is
         component: module.file_path as ComponentKey,
       }))
 
@@ -73,9 +74,11 @@ const DynamicRoutes = () => {
             key={path}
             path={path}
             element={
-              <Suspense fallback={<LoadingFallback />}>
-                <Component />
-              </Suspense>
+              <Layout>
+                <Suspense fallback={<LoadingFallback />}>
+                  <Component />
+                </Suspense>
+              </Layout>
             }
           />
         )

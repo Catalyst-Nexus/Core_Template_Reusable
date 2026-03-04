@@ -1,6 +1,5 @@
 import { Routes, Route, Link } from 'react-router'
 import Layout from '@/components/Layout/Layout'
-import DynamicRoutes from '@/components/DynamicRoutes'
 import UserProfile from '../UserProfile/UserProfile'
 import Settings from '../Settings/Settings'
 
@@ -334,9 +333,6 @@ const Dashboard = () => {
         <Route path="/" element={<DashboardHome />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/settings" element={<Settings />} />
-        
-        {/* Dynamic routes from database modules */}
-        <DynamicRoutes />
       </Routes>
     </Layout>
   )

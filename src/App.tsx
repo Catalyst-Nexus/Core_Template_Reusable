@@ -7,6 +7,7 @@ import Register from './pages/Register/Register'
 import PendingConfirmation from './pages/PendingConfirmation/PendingConfirmation'
 import Dashboard from './pages/Dashboard/Dashboard'
 import PrivateRoute from './components/PrivateRoute'
+import DynamicRoutes from './components/DynamicRoutes'
 
 function App() {
   const { darkMode, highContrast, reducedMotion, fontSize } = useSettingsStore()
@@ -45,6 +46,12 @@ function App() {
                 </PrivateRoute>
               }
             />
+            
+            {/* Dynamic routes from database modules - can be any path */}
+            <PrivateRoute>
+              <DynamicRoutes />
+            </PrivateRoute>
+            
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </div>
