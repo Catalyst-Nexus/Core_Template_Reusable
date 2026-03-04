@@ -7,6 +7,7 @@ import FacilitiesManagement from '@/views/rbac/FacilitiesManagement'
 import ModuleManagement from '@/views/rbac/ModuleManagement'
 import UserManagement from '@/views/rbac/UserManagement'
 import UserActivation from '@/views/rbac/UserActivation'
+
 import { cn } from '@/lib/utils'
 import {
   Users,

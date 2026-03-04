@@ -13,7 +13,7 @@ export interface Role {
   id: string
   role_name: string
   role_code: string
-  is_active: boolean
+  is_active?: boolean
   created_at: string
 }
 
@@ -29,13 +29,41 @@ export interface Module {
 export interface UserRole {
   user_id: string
   role_id: string
-  assigned_at: string
+  created_at: string
 }
 
 export interface RoleModuleAccess {
   role_id: string
   module_id: string
-  assigned_at: string
+  created_at: string
+}
+
+export interface Facility {
+  id: string
+  facility_name: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface UserFacility {
+  user_id: string
+  facilities_id: string
+  created_at: string
+}
+
+export interface Permission {
+  id: string
+  module_id: string
+  action_type: string
+  permission_code: string
+  description: string
+  created_at: string
+}
+
+export interface RolePermission {
+  role_id: string
+  permission_id: string
+  created_at: string
 }
 
 // Fetch all users from pending_users table
@@ -147,7 +175,10 @@ export const assignRoleToUser = async (
     }
 
     // First, remove any existing role assignment (assuming one role per user)
-    const { error: deleteError } = await supabase.from('user_roles').delete().eq('user_id', userId)
+    const { error: deleteError } = await supabase
+      .from('user_roles')
+      .delete()
+      .match({ user_id: userId })
 
     if (deleteError) {
       console.error('Error removing old role:', deleteError)
@@ -158,7 +189,6 @@ export const assignRoleToUser = async (
       {
         user_id: userId,
         role_id: roleId,
-        assigned_at: new Date().toISOString(),
       },
     ])
 
@@ -180,7 +210,14 @@ export const getUserRoles = async (userId: string): Promise<Role[]> => {
   try {
     const { data, error } = await supabase
       .from('user_roles')
-      .select('roles(*)')
+      .select(`
+        roles:role_id (
+          id,
+          role_name,
+          role_code,
+          created_at
+        )
+      `)
       .eq('user_id', userId)
 
     if (error) {
@@ -188,11 +225,7 @@ export const getUserRoles = async (userId: string): Promise<Role[]> => {
       return []
     }
 
-    interface UserRoleEntry {
-      roles: Role
-    }
-
-    return (data as unknown as UserRoleEntry[] | null)?.map((entry) => entry.roles).filter(Boolean) || []
+    return (data as unknown as Array<{ roles: Role[] }>)?.map((entry) => entry.roles).flat().filter(Boolean) || []
   } catch (err) {
     console.error('Error in getUserRoles:', err)
     return []
@@ -222,7 +255,6 @@ export const assignModulesToRole = async (
       const assignments = moduleIds.map((moduleId) => ({
         role_id: roleId,
         module_id: moduleId,
-        assigned_at: new Date().toISOString(),
       }))
 
       const { error } = await supabase.from('role_module_access').insert(assignments)
@@ -273,7 +305,7 @@ export const fetchRoleModuleAssignments = async (): Promise<RoleModuleAccess[]> 
     const { data, error } = await supabase
       .from('role_module_access')
       .select('*')
-      .order('assigned_at', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching role module assignments:', error)
@@ -284,5 +316,246 @@ export const fetchRoleModuleAssignments = async (): Promise<RoleModuleAccess[]> 
   } catch (err) {
     console.error('Error in fetchRoleModuleAssignments:', err)
     return []
+  }
+}
+
+// Fetch all facilities
+export const fetchFacilities = async (): Promise<Facility[]> => {
+  if (!supabase) return []
+
+  try {
+    const { data, error } = await supabase
+      .from('facilities')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching facilities:', error)
+      return []
+    }
+
+    return data || []
+  } catch (err) {
+    console.error('Error in fetchFacilities:', err)
+    return []
+  }
+}
+
+// Assign facilities to a user
+export const assignFacilitiesToUser = async (
+  userId: string,
+  facilityIds: string[]
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+
+  try {
+    // Remove all existing facility assignments for this user
+    const { error: deleteError } = await supabase
+      .from('user_facilities')
+      .delete()
+      .eq('user_id', userId)
+
+    if (deleteError) {
+      console.error('Error removing old facility assignments:', deleteError)
+    }
+
+    // Add new facility assignments
+    if (facilityIds.length > 0) {
+      const assignments = facilityIds.map((facilityId) => ({
+        user_id: userId,
+        facilities_id: facilityId,
+      }))
+
+      const { error } = await supabase.from('user_facilities').insert(assignments)
+
+      if (error) {
+        return { success: false, error: `Failed to assign facilities: ${error.message}` }
+      }
+    }
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+}
+
+// Get facilities assigned to a user
+export const getUserFacilities = async (userId: string): Promise<Facility[]> => {
+  if (!supabase) return []
+
+  try {
+    const { data, error } = await supabase
+      .from('user_facilities')
+      .select(`
+        facilities:facilities_id (
+          id,
+          facility_name,
+          is_active,
+          created_at
+        )
+      `)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('Error fetching user facilities:', error)
+      return []
+    }
+
+    return (data as unknown as Array<{ facilities: Facility[] }>)?.map((entry) => entry.facilities).flat().filter(Boolean) || []
+  } catch (err) {
+    console.error('Error in getUserFacilities:', err)
+    return []
+  }
+}    
+
+// Get all user-facility assignments
+export const fetchUserFacilityAssignments = async (): Promise<UserFacility[]> => {
+  if (!supabase) return []
+
+  try {
+    const { data, error } = await supabase
+      .from('user_facilities')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching user facility assignments:', error)
+      return []
+    }
+
+    return data || []
+  } catch (err) {
+    console.error('Error in fetchUserFacilityAssignments:', err)
+    return []
+  }
+}
+
+// Get all user-role assignments with user and role details
+export const fetchUserRoleAssignments = async () => {
+  if (!supabase) return []
+
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select(`
+        user_id,
+        role_id,
+        created_at,
+        pending_users:user_id (id, username, email),
+        roles:role_id (id, role_name, role_code)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching user role assignments:', error)
+      return []
+    }
+
+    return data || []
+  } catch (err) {
+    console.error('Error in fetchUserRoleAssignments:', err)
+    return []
+  }
+}
+
+// ─── Permissions ─────────────────────────────────────────────────────────────
+
+export const fetchPermissions = async (): Promise<Permission[]> => {
+  if (!supabase) return []
+  try {
+    const { data, error } = await supabase
+      .from('permissions')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) { console.error('Error fetching permissions:', error); return [] }
+    return data || []
+  } catch (err) { console.error('Error in fetchPermissions:', err); return [] }
+}
+
+export const createPermission = async (
+  payload: Omit<Permission, 'id' | 'created_at'>
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+  try {
+    const { error } = await supabase.from('permissions').insert([payload])
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
+
+export const updatePermission = async (
+  id: string,
+  payload: Partial<Omit<Permission, 'id' | 'created_at'>>
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+  try {
+    const { error } = await supabase.from('permissions').update(payload).eq('id', id)
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
+
+export const deletePermission = async (
+  id: string
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+  try {
+    const { error } = await supabase.from('permissions').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
+
+// ─── Role Permissions ─────────────────────────────────────────────────────────
+
+export const getRolePermissions = async (roleId: string): Promise<Permission[]> => {
+  if (!supabase) return []
+  try {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .select(`
+        permissions:permission_id (
+          id,
+          module_id,
+          action_type,
+          permission_code,
+          description,
+          created_at
+        )
+      `)
+      .eq('role_id', roleId)
+    if (error) { console.error('Error fetching role permissions:', error); return [] }
+    return (data as unknown as Array<{ permissions: Permission[] }>)?.map((e) => e.permissions).flat().filter(Boolean) || []
+  } catch (err) { console.error('Error in getRolePermissions:', err); return [] }
+}
+
+export const assignPermissionsToRole = async (
+  roleId: string,
+  permissionIds: string[]
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+  try {
+    const { error: del } = await supabase
+      .from('role_permissions')
+      .delete()
+      .match({ role_id: roleId })
+    if (del) console.error('Error removing old role permissions:', del)
+
+    if (permissionIds.length > 0) {
+      const { error } = await supabase
+        .from('role_permissions')
+        .insert(permissionIds.map((pid) => ({ role_id: roleId, permission_id: pid })))
+      if (error) return { success: false, error: error.message }
+    }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
   }
 }

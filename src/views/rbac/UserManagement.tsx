@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { UserList, UserDialog } from '@/components/rbac'
-import { PageHeader, StatsRow, StatCard, ActionsBar, PrimaryButton, Tabs, PlaceholderCard } from '@/components/ui'
+import { UserList, UserDialog, UserFacilityAssignmentList, UserFacilityAssignmentDialog, UserRoleAssignmentList, UserRoleAssignmentDialog } from '@/components/rbac'
+import { PageHeader, StatsRow, StatCard, ActionsBar, PrimaryButton, Tabs } from '@/components/ui'
 import { Users, Plus, RefreshCw } from 'lucide-react'
-import { fetchUsers, fetchRoles, assignRoleToUser, getUserRoles, type User as DBUser, type Role } from '@/services/rbacService'
+import { fetchUsers, fetchRoles, assignRoleToUser, getUserRoles, fetchFacilities, assignFacilitiesToUser, getUserFacilities, fetchUserRoleAssignments, type User as DBUser, type Role, type Facility } from '@/services/rbacService'
 import RoleModuleAccessManagement from './RoleModuleAccessManagement'
+import PermissionManagement from './PermissionManagement'
+import RolePermissionManagement from './RolePermissionManagement'
 
 interface User {
   id: string
@@ -14,12 +16,19 @@ interface User {
 }
 
 type TabKey = 'users' | 'assignments' | 'roles' | 'access'
+type AccessSubTab = 'module-access' | 'permissions' | 'role-permissions'
 
 const tabs = [
   { key: 'users', label: 'Users' },
   { key: 'assignments', label: 'User Assignments' },
   { key: 'roles', label: 'User Roles' },
-  { key: 'access', label: 'Role Module Access' },
+  { key: 'access', label: 'Access & Permissions' },
+]
+
+const accessSubTabs = [
+  { key: 'module-access', label: 'Module Access' },
+  { key: 'permissions', label: 'Permissions' },
+  { key: 'role-permissions', label: 'Role Permissions' },
 ]
 
 const UserManagement = () => {
@@ -35,18 +44,50 @@ const UserManagement = () => {
   const [selectedUserRole, setSelectedUserRole] = useState<string>('')
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
 
+  // User Assignments (user-facilities) state
+  const [facilities, setFacilities] = useState<Facility[]>([])
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false)
+  const [selectedUserForFacilities, setSelectedUserForFacilities] = useState<string>('')
+  const [selectedFacilityIds, setSelectedFacilityIds] = useState<string[]>([])
+  const [assignmentSearch, setAssignmentSearch] = useState('')
+  const [userFacilityAssignments, setUserFacilityAssignments] = useState<any[]>([])
+
+  // User Roles (user-role assignments) state
+  const [showRoleAssignmentModal, setShowRoleAssignmentModal] = useState(false)
+  const [selectedUserForRole, setSelectedUserForRole] = useState<string>('')
+  const [selectedRoleForAssignment, setSelectedRoleForAssignment] = useState<string>('')
+  const [roleAssignmentSearch, setRoleAssignmentSearch] = useState('')
+  const [editingUserRoleId, setEditingUserRoleId] = useState<string | null>(null)
+  const [userRoleAssignments, setUserRoleAssignments] = useState<any[]>([])
+  const [accessSubTab, setAccessSubTab] = useState<AccessSubTab>('module-access')
+
   // Fetch users and roles on component mount
   useEffect(() => {
     loadData()
   }, [])
 
+  // Load user facility assignments when on assignments tab
+  useEffect(() => {
+    if (activeTab === 'assignments') {
+      loadUserFacilityAssignments()
+    }
+  }, [activeTab, users, facilities])
+
+  // Load user role assignments when on roles tab
+  useEffect(() => {
+    if (activeTab === 'roles') {
+      loadUserRoleAssignments()
+    }
+  }, [activeTab, users, roles])
+
   const loadData = async () => {
     setIsLoading(true)
     setError('')
     try {
-      const [fetchedUsers, fetchedRoles] = await Promise.all([
+      const [fetchedUsers, fetchedRoles, fetchedFacilities] = await Promise.all([
         fetchUsers(),
-        fetchRoles()
+        fetchRoles(),
+        fetchFacilities()
       ])
 
       // Transform DB users to component users
@@ -63,6 +104,7 @@ const UserManagement = () => {
       }))
 
       setUsers(transformedUsers)
+      setFacilities(fetchedFacilities)
       setRoles(fetchedRoles)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load data'
@@ -106,6 +148,52 @@ const UserManagement = () => {
     }
   }
 
+  // Load user facility assignments with user and facility details
+  const loadUserFacilityAssignments = async () => {
+    try {
+      const assignments = await Promise.all(
+        users.map(async (user) => {
+          const userFacilities = await getUserFacilities(user.id)
+          return {
+            id: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            facilities: userFacilities.map(f => f.facility_name),
+            assignedAt: user.registeredAt
+          }
+        })
+      )
+      setUserFacilityAssignments(assignments)
+    } catch (err) {
+      console.error('Error loading user facility assignments:', err)
+    }
+  }
+
+  // Load user role assignments with user and role details
+  const loadUserRoleAssignments = async () => {
+    try {
+      const assignments = await Promise.all(
+        users.map(async (user) => {
+          const userRoles = await getUserRoles(user.id)
+          const role = userRoles.length > 0 ? userRoles[0] : null
+          return {
+            id: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            roleName: role ? role.role_name : 'No role assigned',
+            roleCode: role ? role.role_code : '-',
+            assignedAt: user.registeredAt
+          }
+        })
+      )
+      setUserRoleAssignments(assignments)
+    } catch (err) {
+      console.error('Error loading user role assignments:', err)
+      // Reload assignments
+      loadUserFacilityAssignments()
+    }
+  }
+
   const total = users.length
   const active = users.filter((u) => u.status === 'active').length
   const inactive = users.filter((u) => u.status === 'inactive').length
@@ -126,6 +214,95 @@ const UserManagement = () => {
     }
     
     setShowModal(true)
+  }
+
+  // User facility assignment handlers
+  const handleAssignFacilities = async () => {
+    if (!selectedUserForFacilities) {
+      alert('Please select a user')
+      return
+    }
+
+    try {
+      const result = await assignFacilitiesToUser(selectedUserForFacilities, selectedFacilityIds)
+      if (!result.success) {
+        alert(`Failed to assign facilities: ${result.error}`)
+        return
+      }
+
+      // Reset form
+      setSelectedUserForFacilities('')
+      setSelectedFacilityIds([])
+      setShowAssignmentModal(false)
+      alert('Facilities assigned successfully')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred'
+      alert(message)
+    }
+  }
+
+  const handleEditUserFacilities = async (userId: string, userName: string) => {
+    setSelectedUserForFacilities(userId)
+    
+    // Fetch current user facilities
+    try {
+      const userFacilities = await getUserFacilities(userId)
+      setSelectedFacilityIds(userFacilities.map(f => f.id))
+    } catch (err) {
+      console.error('Error fetching user facilities:', err)
+    }
+    
+    setShowAssignmentModal(true)
+  }
+
+  // User role assignment handlers
+  const handleAssignRoleToUser = async () => {
+    if (!selectedUserForRole) {
+      alert('Please select a user')
+      return
+    }
+
+    if (!selectedRoleForAssignment) {
+      alert('Please select a role')
+      return
+    }
+
+    try {
+      const result = await assignRoleToUser(selectedUserForRole, selectedRoleForAssignment)
+      if (!result.success) {
+        alert(`Failed to assign role: ${result.error}`)
+        return
+      }
+
+      // Reset form
+      setSelectedUserForRole('')
+      setSelectedRoleForAssignment('')
+      setEditingUserRoleId(null)
+      // Reload assignments
+      loadUserRoleAssignments()
+      setShowRoleAssignmentModal(false)
+      alert('Role assigned successfully')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred'
+      alert(message)
+    }
+  }
+
+  const handleEditUserRole = async (userId: string) => {
+    setSelectedUserForRole(userId)
+    setEditingUserRoleId(userId)
+    
+    // Fetch current user role
+    try {
+      const userRoles = await getUserRoles(userId)
+      if (userRoles.length > 0) {
+        setSelectedRoleForAssignment(userRoles[0].id)
+      }
+    } catch (err) {
+      console.error('Error fetching user roles:', err)
+    }
+    
+    setShowRoleAssignmentModal(true)
   }
 
   return (
@@ -190,14 +367,76 @@ const UserManagement = () => {
       )}
 
       {activeTab === 'assignments' && (
-        <PlaceholderCard>User Assignments content coming soon...</PlaceholderCard>
+        <>
+          <ActionsBar>
+            <PrimaryButton onClick={() => {
+              setSelectedUserForFacilities('')
+              setSelectedFacilityIds([])
+              setShowAssignmentModal(true)
+            }}>
+              <Plus className="w-4 h-4" />
+              Assign Facilities
+            </PrimaryButton>
+          </ActionsBar>
+
+          <UserFacilityAssignmentList
+            assignments={userFacilityAssignments}
+            search={assignmentSearch}
+            onSearchChange={setAssignmentSearch}
+            onEdit={(assignment) => handleEditUserFacilities(assignment.id, assignment.userName)}
+            onDelete={(id) => console.log('Delete facility assignment', id)}
+          />
+        </>
       )}
 
       {activeTab === 'roles' && (
-        <PlaceholderCard>User Roles content coming soon...</PlaceholderCard>
+        <>
+          <ActionsBar>
+            <PrimaryButton onClick={() => {
+              setSelectedUserForRole('')
+              setSelectedRoleForAssignment('')
+              setEditingUserRoleId(null)
+              setShowRoleAssignmentModal(true)
+            }}>
+              <Plus className="w-4 h-4" />
+              Assign Role
+            </PrimaryButton>
+          </ActionsBar>
+
+          <UserRoleAssignmentList
+            assignments={userRoleAssignments}
+            search={roleAssignmentSearch}
+            onSearchChange={setRoleAssignmentSearch}
+            onEdit={(assignment) => handleEditUserRole(assignment.id)}
+            onDelete={(id) => console.log('Delete role assignment', id)}
+          />
+        </>
       )}
 
-      {activeTab === 'access' && <RoleModuleAccessManagement />}
+      {activeTab === 'access' && (
+        <div className="space-y-4">
+          {/* Sub-tabs */}
+          <div className="flex gap-1 border-b border-border">
+            {accessSubTabs.map((st) => (
+              <button
+                key={st.key}
+                onClick={() => setAccessSubTab(st.key as AccessSubTab)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  accessSubTab === st.key
+                    ? 'border-success text-success'
+                    : 'border-transparent text-muted hover:text-foreground'
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          {accessSubTab === 'module-access' && <RoleModuleAccessManagement />}
+          {accessSubTab === 'permissions' && <PermissionManagement />}
+          {accessSubTab === 'role-permissions' && <RolePermissionManagement />}
+        </div>
+      )}
 
       <UserDialog
         open={showModal}
@@ -214,6 +453,54 @@ const UserManagement = () => {
         selectedRole={selectedUserRole}
         onRoleChange={setSelectedUserRole}
         editMode={!!editingUserId}
+      />
+
+      <UserFacilityAssignmentDialog
+        open={showAssignmentModal}
+        onClose={() => {
+          setShowAssignmentModal(false)
+          setSelectedUserForFacilities('')
+          setSelectedFacilityIds([])
+        }}
+        onSubmit={handleAssignFacilities}
+        users={users.map(u => ({
+          id: u.id,
+          username: u.name,
+          email: u.email,
+          status: u.status,
+          created_at: u.registeredAt,
+          is_super_admin: false
+        }))}
+        facilities={facilities}
+        selectedUserId={selectedUserForFacilities}
+        onUserChange={setSelectedUserForFacilities}
+        selectedFacilityIds={selectedFacilityIds}
+        onFacilityIdsChange={setSelectedFacilityIds}
+      />
+
+      <UserRoleAssignmentDialog
+        open={showRoleAssignmentModal}
+        onClose={() => {
+          setShowRoleAssignmentModal(false)
+          setSelectedUserForRole('')
+          setSelectedRoleForAssignment('')
+          setEditingUserRoleId(null)
+        }}
+        onSubmit={handleAssignRoleToUser}
+        users={users.map(u => ({
+          id: u.id,
+          username: u.name,
+          email: u.email,
+          status: u.status,
+          created_at: u.registeredAt,
+          is_super_admin: false
+        }))}
+        roles={roles}
+        selectedUserId={selectedUserForRole}
+        onUserChange={setSelectedUserForRole}
+        selectedRoleId={selectedRoleForAssignment}
+        onRoleChange={setSelectedRoleForAssignment}
+        editMode={!!editingUserRoleId}
       />
     </div>
   )

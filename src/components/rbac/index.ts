@@ -9,3 +9,7 @@ export { default as UserList } from "./UserList";
 export { default as UserDialog } from "./UserDialog";
 export { default as UserActivationList } from "./UserActivationList";
 export { default as UserActivationDialog } from "./UserActivationDialog";
+export { default as UserFacilityAssignmentList } from "./UserFacilityAssignmentList";
+export { default as UserFacilityAssignmentDialog } from "./UserFacilityAssignmentDialog";
+export { default as UserRoleAssignmentList } from "./UserRoleAssignmentList";
+export { default as UserRoleAssignmentDialog } from "./UserRoleAssignmentDialog";
