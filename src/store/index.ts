@@ -52,7 +52,9 @@ export const useSettingsStore = create<SettingsState>()(
 )
 
 // Auth store using Zustand
-interface User {
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+
+export interface User {
   id: string
   username: string
   email: string
@@ -63,10 +65,13 @@ interface User {
 interface AuthState {
   user: User | null
   isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<boolean>
-  logout: () => void
+  isLoading: boolean
+  error: string | null
+  login: (email: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
   updateProfilePicture: (url: string | null) => void
   updateUser: (updates: Partial<User>) => void
+  setError: (error: string | null) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -74,23 +79,69 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: async (username: string, password: string) => {
-        // Mock login - replace with actual API call
-        if (username && password) {
-          const mockUser: User = {
-            id: '1',
-            username: username,
-            email: `${username}@example.com`,
-            role: 'admin',
-            profilePicture: null,
+      isLoading: false,
+      error: null,
+      login: async (email: string, password: string) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          if (!isSupabaseConfigured() || !supabase) {
+            set({ error: 'Supabase is not configured', isLoading: false })
+            return false
           }
-          set({ user: mockUser, isAuthenticated: true })
-          return true
+
+          const { data, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+
+          if (authError) {
+            set({ error: authError.message, isLoading: false })
+            return false
+          }
+
+          if (data.user) {
+            // Fetch user profile from database
+            const { data: userProfile, error: profileError } = await supabase
+              .from('users')
+              .select('id, username, email, role, profile_picture')
+              .eq('id', data.user.id)
+              .single()
+
+            if (profileError && profileError.code !== 'PGRST116') {
+              console.error('Profile fetch error:', profileError)
+            }
+
+            const userData: User = {
+              id: data.user.id,
+              username: userProfile?.username || email.split('@')[0],
+              email: email,
+              role: userProfile?.role || 'user',
+              profilePicture: userProfile?.profile_picture || null,
+            }
+
+            set({ user: userData, isAuthenticated: true, isLoading: false })
+            return true
+          }
+
+          set({ error: 'Login failed', isLoading: false })
+          return false
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'An error occurred during login'
+          set({ error: message, isLoading: false })
+          return false
         }
-        return false
       },
-      logout: () => {
-        set({ user: null, isAuthenticated: false })
+      logout: async () => {
+        try {
+          if (isSupabaseConfigured() && supabase) {
+            await supabase.auth.signOut()
+          }
+          set({ user: null, isAuthenticated: false, error: null })
+        } catch (error) {
+          console.error('Logout error:', error)
+          set({ user: null, isAuthenticated: false })
+        }
       },
       updateProfilePicture: (url) => {
         set((state) => ({
@@ -101,6 +152,9 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           user: state.user ? { ...state.user, ...updates } : null,
         }))
+      },
+      setError: (error) => {
+        set({ error })
       },
     }),
     {
