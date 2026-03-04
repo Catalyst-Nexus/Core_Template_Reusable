@@ -1,57 +1,92 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { PageHeader, StatsRow, StatCard, ActionsBar, PrimaryButton } from '@/components/ui'
-import { Shield, RefreshCw, Save } from 'lucide-react'
+import { Shield, RefreshCw, Save, Check, X } from 'lucide-react'
 import {
   fetchRoles,
-  fetchPermissions,
   getRolePermissions,
-  assignPermissionsToRole,
+  saveAllRolePermissions,
   fetchModules,
   type Role,
-  type Permission,
+  type RolePermission,
   type Module,
 } from '@/services/rbacService'
 
+interface ModulePermissions {
+  module_id: string
+  can_select: boolean
+  can_insert: boolean
+  can_update: boolean
+  can_delete: boolean
+}
+
 const RolePermissionManagement = () => {
   const [roles, setRoles] = useState<Role[]>([])
-  const [permissions, setPermissions] = useState<Permission[]>([])
   const [modules, setModules] = useState<Module[]>([])
   const [selectedRoleId, setSelectedRoleId] = useState('')
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+  const [modulePermissions, setModulePermissions] = useState<ModulePermissions[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  useEffect(() => { loadData() }, [])
+  const initModulePermissions = useCallback((mods: Module[], existingPerms: RolePermission[]) => {
+    const permsMap = new Map(existingPerms.map(p => [p.module_id, p]))
+    return mods.map(mod => {
+      const existing = permsMap.get(mod.id)
+      return {
+        module_id: mod.id,
+        can_select: existing?.can_select ?? false,
+        can_insert: existing?.can_insert ?? false,
+        can_update: existing?.can_update ?? false,
+        can_delete: existing?.can_delete ?? false,
+      }
+    })
+  }, [])
 
-  useEffect(() => {
-    if (selectedRoleId) loadRolePermissions(selectedRoleId)
-    else setSelectedPermissions([])
-  }, [selectedRoleId])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true)
     setError('')
-    const [r, p, m] = await Promise.all([fetchRoles(), fetchPermissions(), fetchModules()])
+    const [r, m] = await Promise.all([fetchRoles(), fetchModules()])
     setRoles(r)
-    setPermissions(p)
     setModules(m)
+    setModulePermissions(initModulePermissions(m, []))
     setIsLoading(false)
-  }
+  }, [initModulePermissions])
 
-  const loadRolePermissions = async (roleId: string) => {
+  const loadRolePermissions = useCallback(async (roleId: string, mods: Module[]) => {
     try {
       const rp = await getRolePermissions(roleId)
-      setSelectedPermissions(rp.map((p) => p.id))
+      setModulePermissions(initModulePermissions(mods, rp))
     } catch {
-      setSelectedPermissions([])
+      setModulePermissions(initModulePermissions(mods, []))
     }
+  }, [initModulePermissions])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    if (selectedRoleId && modules.length > 0) {
+      loadRolePermissions(selectedRoleId, modules)
+    } else {
+      setModulePermissions(initModulePermissions(modules, []))
+    }
+  }, [selectedRoleId, modules, initModulePermissions, loadRolePermissions])
+
+  const handleToggle = (moduleId: string, action: 'can_select' | 'can_insert' | 'can_update' | 'can_delete') => {
+    setModulePermissions(prev =>
+      prev.map(mp =>
+        mp.module_id === moduleId ? { ...mp, [action]: !mp[action] } : mp
+      )
+    )
   }
 
-  const handleToggle = (permId: string) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(permId) ? prev.filter((id) => id !== permId) : [...prev, permId]
+  const handleToggleAll = (moduleId: string, enable: boolean) => {
+    setModulePermissions(prev =>
+      prev.map(mp =>
+        mp.module_id === moduleId
+          ? { ...mp, can_select: enable, can_insert: enable, can_update: enable, can_delete: enable }
+          : mp
+      )
     )
   }
 
@@ -59,7 +94,7 @@ const RolePermissionManagement = () => {
     if (!selectedRoleId) { setError('Please select a role first'); return }
     setIsSaving(true); setError(''); setSuccess('')
     try {
-      const result = await assignPermissionsToRole(selectedRoleId, selectedPermissions)
+      const result = await saveAllRolePermissions(selectedRoleId, modulePermissions)
       if (result.success) {
         setSuccess('Permissions updated successfully')
         setTimeout(() => setSuccess(''), 3000)
@@ -76,31 +111,28 @@ const RolePermissionManagement = () => {
   const getModuleName = (moduleId: string) =>
     modules.find((m) => m.id === moduleId)?.module_name ?? '—'
 
-  // Group permissions by module
-  const grouped = permissions.reduce<Record<string, Permission[]>>((acc, p) => {
-    const key = p.module_id
-    if (!acc[key]) acc[key] = []
-    acc[key].push(p)
-    return acc
-  }, {})
-
   const selectedRole = roles.find((r) => r.id === selectedRoleId)
+
+  const totalPermissions = modulePermissions.reduce(
+    (acc, mp) => acc + (mp.can_select ? 1 : 0) + (mp.can_insert ? 1 : 0) + (mp.can_update ? 1 : 0) + (mp.can_delete ? 1 : 0),
+    0
+  )
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Role Permissions"
-        subtitle="Assign granular permissions to roles"
+        subtitle="Assign CRUD permissions per module for each role"
         icon={<Shield className="w-6 h-6" />}
       />
 
       <StatsRow>
         <StatCard label="Total Roles" value={roles.length} />
-        <StatCard label="Total Permissions" value={permissions.length} />
+        <StatCard label="Total Modules" value={modules.length} />
         <StatCard
-          label="Selected Permissions"
-          value={selectedPermissions.length}
-          color={selectedPermissions.length > 0 ? 'success' : 'warning'}
+          label="Active Permissions"
+          value={totalPermissions}
+          color={totalPermissions > 0 ? 'success' : 'warning'}
         />
       </StatsRow>
 
@@ -145,53 +177,104 @@ const RolePermissionManagement = () => {
           </div>
         </div>
 
-        {/* Permission list grouped by module */}
+        {/* Permission matrix by module */}
         <div className="lg:col-span-3 space-y-4">
           {isLoading ? (
             <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted">
-              Loading permissions...
+              Loading modules...
             </div>
-          ) : permissions.length === 0 ? (
+          ) : modules.length === 0 ? (
             <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted">
-              No permissions found. Create some in the Permissions page first.
+              No modules found. Create some in the Modules page first.
             </div>
           ) : (
-            Object.entries(grouped).map(([moduleId, perms]) => (
-              <div key={moduleId} className="bg-surface border border-border rounded-2xl p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-semibold rounded">
-                    {getModuleName(moduleId)}
-                  </span>
-                  <span className="text-xs text-muted">
-                    {perms.filter((p) => selectedPermissions.includes(p.id)).length}/{perms.length} selected
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {perms.map((perm) => (
-                    <label
-                      key={perm.id}
-                      className="flex items-start gap-3 p-3 border border-border rounded-lg hover:bg-background/50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedPermissions.includes(perm.id)}
-                        onChange={() => handleToggle(perm.id)}
-                        disabled={!selectedRoleId || isLoading}
-                        className="w-4 h-4 mt-0.5 rounded border-border text-success"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-mono text-xs text-foreground">{perm.permission_code}</p>
-                        <p className="text-xs text-muted mt-0.5 capitalize">{perm.action_type}</p>
-                        {perm.description && (
-                          <p className="text-xs text-muted/70 mt-0.5 truncate">{perm.description}</p>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-background/50">
+                    <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">Module</th>
+                    <th className="text-center px-3 py-3 text-sm font-semibold text-foreground w-20">Select</th>
+                    <th className="text-center px-3 py-3 text-sm font-semibold text-foreground w-20">Insert</th>
+                    <th className="text-center px-3 py-3 text-sm font-semibold text-foreground w-20">Update</th>
+                    <th className="text-center px-3 py-3 text-sm font-semibold text-foreground w-20">Delete</th>
+                    <th className="text-center px-3 py-3 text-sm font-semibold text-foreground w-24">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modulePermissions.map((mp) => {
+                    const allEnabled = mp.can_select && mp.can_insert && mp.can_update && mp.can_delete
+                    const anyEnabled = mp.can_select || mp.can_insert || mp.can_update || mp.can_delete
+                    return (
+                      <tr key={mp.module_id} className="border-b border-border last:border-0 hover:bg-background/30">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-foreground">
+                            {getModuleName(mp.module_id)}
+                          </span>
+                        </td>
+                        <td className="text-center px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={mp.can_select}
+                            onChange={() => handleToggle(mp.module_id, 'can_select')}
+                            disabled={!selectedRoleId || isLoading}
+                            className="w-4 h-4 rounded border-border text-success"
+                          />
+                        </td>
+                        <td className="text-center px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={mp.can_insert}
+                            onChange={() => handleToggle(mp.module_id, 'can_insert')}
+                            disabled={!selectedRoleId || isLoading}
+                            className="w-4 h-4 rounded border-border text-success"
+                          />
+                        </td>
+                        <td className="text-center px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={mp.can_update}
+                            onChange={() => handleToggle(mp.module_id, 'can_update')}
+                            disabled={!selectedRoleId || isLoading}
+                            className="w-4 h-4 rounded border-border text-success"
+                          />
+                        </td>
+                        <td className="text-center px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={mp.can_delete}
+                            onChange={() => handleToggle(mp.module_id, 'can_delete')}
+                            disabled={!selectedRoleId || isLoading}
+                            className="w-4 h-4 rounded border-border text-success"
+                          />
+                        </td>
+                        <td className="text-center px-3 py-3">
+                          <div className="flex justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAll(mp.module_id, true)}
+                              disabled={!selectedRoleId || isLoading || allEnabled}
+                              className="p-1.5 rounded hover:bg-success/10 text-success disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Enable all"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAll(mp.module_id, false)}
+                              disabled={!selectedRoleId || isLoading || !anyEnabled}
+                              className="p-1.5 rounded hover:bg-danger/10 text-danger disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Disable all"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {selectedRoleId && !isLoading && (

@@ -3,7 +3,6 @@ import { UserList, UserDialog, UserFacilityAssignmentList, UserFacilityAssignmen
 import { PageHeader, StatsRow, StatCard, ActionsBar, PrimaryButton, Tabs } from '@/components/ui'
 import { Users, Plus, RefreshCw } from 'lucide-react'
 import { fetchUsers, fetchRoles, assignRoleToUser, getUserRoles, fetchFacilities, assignFacilitiesToUser, getUserFacilities, fetchUserRoleAssignments, type User as DBUser, type Role, type Facility } from '@/services/rbacService'
-import PermissionManagement from './PermissionManagement'
 import RolePermissionManagement from './RolePermissionManagement'
 
 interface User {
@@ -15,18 +14,12 @@ interface User {
 }
 
 type TabKey = 'users' | 'assignments' | 'roles' | 'access'
-type AccessSubTab = 'permissions' | 'role-permissions'
 
 const tabs = [
   { key: 'users', label: 'Users' },
   { key: 'assignments', label: 'User Assignments' },
   { key: 'roles', label: 'User Roles' },
   { key: 'access', label: 'Access & Permissions' },
-]
-
-const accessSubTabs = [
-  { key: 'permissions', label: 'Permissions' },
-  { key: 'role-permissions', label: 'Role Permissions' },
 ]
 
 const UserManagement = () => {
@@ -57,7 +50,6 @@ const UserManagement = () => {
   const [roleAssignmentSearch, setRoleAssignmentSearch] = useState('')
   const [editingUserRoleId, setEditingUserRoleId] = useState<string | null>(null)
   const [userRoleAssignments, setUserRoleAssignments] = useState<any[]>([])
-  const [accessSubTab, setAccessSubTab] = useState<AccessSubTab>('permissions')
 
   // Fetch users and roles on component mount
   useEffect(() => {
@@ -412,27 +404,7 @@ const UserManagement = () => {
       )}
 
       {activeTab === 'access' && (
-        <div className="space-y-4">
-          {/* Sub-tabs */}
-          <div className="flex gap-1 border-b border-border">
-            {accessSubTabs.map((st) => (
-              <button
-                key={st.key}
-                onClick={() => setAccessSubTab(st.key as AccessSubTab)}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                  accessSubTab === st.key
-                    ? 'border-success text-success'
-                    : 'border-transparent text-muted hover:text-foreground'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
-
-          {accessSubTab === 'permissions' && <PermissionManagement />}
-          {accessSubTab === 'role-permissions' && <RolePermissionManagement />}
-        </div>
+        <RolePermissionManagement />
       )}
 
       <UserDialog

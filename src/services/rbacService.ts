@@ -51,18 +51,14 @@ export interface UserFacility {
   created_at: string
 }
 
-export interface Permission {
-  id: string
-  module_id: string
-  action_type: string
-  permission_code: string
-  description: string
-  created_at: string
-}
-
 export interface RolePermission {
+  id: string
   role_id: string
-  permission_id: string
+  module_id: string
+  can_select: boolean
+  can_insert: boolean
+  can_update: boolean
+  can_delete: boolean
   created_at: string
 }
 
@@ -460,101 +456,106 @@ export const fetchUserRoleAssignments = async () => {
   }
 }
 
-// ─── Permissions ─────────────────────────────────────────────────────────────
-
-export const fetchPermissions = async (): Promise<Permission[]> => {
-  if (!supabase) return []
-  try {
-    const { data, error } = await supabase
-      .from('permissions')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) { console.error('Error fetching permissions:', error); return [] }
-    return data || []
-  } catch (err) { console.error('Error in fetchPermissions:', err); return [] }
-}
-
-export const createPermission = async (
-  payload: Omit<Permission, 'id' | 'created_at'>
-): Promise<{ success: boolean; error?: string }> => {
-  if (!supabase) return { success: false, error: 'Supabase not configured' }
-  try {
-    const { error } = await supabase.from('permissions').insert([payload])
-    if (error) return { success: false, error: error.message }
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
-  }
-}
-
-export const updatePermission = async (
-  id: string,
-  payload: Partial<Omit<Permission, 'id' | 'created_at'>>
-): Promise<{ success: boolean; error?: string }> => {
-  if (!supabase) return { success: false, error: 'Supabase not configured' }
-  try {
-    const { error } = await supabase.from('permissions').update(payload).eq('id', id)
-    if (error) return { success: false, error: error.message }
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
-  }
-}
-
-export const deletePermission = async (
-  id: string
-): Promise<{ success: boolean; error?: string }> => {
-  if (!supabase) return { success: false, error: 'Supabase not configured' }
-  try {
-    const { error } = await supabase.from('permissions').delete().eq('id', id)
-    if (error) return { success: false, error: error.message }
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
-  }
-}
-
 // ─── Role Permissions ─────────────────────────────────────────────────────────
 
-export const getRolePermissions = async (roleId: string): Promise<Permission[]> => {
+export const fetchRolePermissions = async (): Promise<RolePermission[]> => {
   if (!supabase) return []
   try {
     const { data, error } = await supabase
       .from('role_permissions')
-      .select(`
-        permissions:permission_id (
-          id,
-          module_id,
-          action_type,
-          permission_code,
-          description,
-          created_at
-        )
-      `)
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) { console.error('Error fetching role permissions:', error); return [] }
+    return data || []
+  } catch (err) { console.error('Error in fetchRolePermissions:', err); return [] }
+}
+
+export const getRolePermissions = async (roleId: string): Promise<RolePermission[]> => {
+  if (!supabase) return []
+  try {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .select('*')
       .eq('role_id', roleId)
     if (error) { console.error('Error fetching role permissions:', error); return [] }
-    return (data as unknown as Array<{ permissions: Permission[] }>)?.map((e) => e.permissions).flat().filter(Boolean) || []
+    return data || []
   } catch (err) { console.error('Error in getRolePermissions:', err); return [] }
 }
 
-export const assignPermissionsToRole = async (
+export const upsertRolePermission = async (
   roleId: string,
-  permissionIds: string[]
+  moduleId: string,
+  permissions: { can_select: boolean; can_insert: boolean; can_update: boolean; can_delete: boolean }
 ): Promise<{ success: boolean; error?: string }> => {
   if (!supabase) return { success: false, error: 'Supabase not configured' }
   try {
-    const { error: del } = await supabase
+    const { error } = await supabase
+      .from('role_permissions')
+      .upsert(
+        {
+          role_id: roleId,
+          module_id: moduleId,
+          ...permissions,
+        },
+        { onConflict: 'role_id,module_id' }
+      )
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
+
+export const deleteRolePermission = async (
+  roleId: string,
+  moduleId: string
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+  try {
+    const { error } = await supabase
       .from('role_permissions')
       .delete()
-      .match({ role_id: roleId })
-    if (del) console.error('Error removing old role permissions:', del)
+      .eq('role_id', roleId)
+      .eq('module_id', moduleId)
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
 
-    if (permissionIds.length > 0) {
-      const { error } = await supabase
-        .from('role_permissions')
-        .insert(permissionIds.map((pid) => ({ role_id: roleId, permission_id: pid })))
+export const saveAllRolePermissions = async (
+  roleId: string,
+  modulePermissions: Array<{ module_id: string; can_select: boolean; can_insert: boolean; can_update: boolean; can_delete: boolean }>
+): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: false, error: 'Supabase not configured' }
+  try {
+    // Remove all existing permissions for this role
+    const { error: deleteError } = await supabase
+      .from('role_permissions')
+      .delete()
+      .eq('role_id', roleId)
+    if (deleteError) {
+      console.error('Error removing old role permissions:', deleteError)
+    }
+
+    // Insert only modules that have at least one permission enabled
+    const permissionsToInsert = modulePermissions
+      .filter(p => p.can_select || p.can_insert || p.can_update || p.can_delete)
+      .map(p => ({
+        role_id: roleId,
+        module_id: p.module_id,
+        can_select: p.can_select,
+        can_insert: p.can_insert,
+        can_update: p.can_update,
+        can_delete: p.can_delete,
+      }))
+
+    if (permissionsToInsert.length > 0) {
+      const { error } = await supabase.from('role_permissions').insert(permissionsToInsert)
       if (error) return { success: false, error: error.message }
     }
+
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
