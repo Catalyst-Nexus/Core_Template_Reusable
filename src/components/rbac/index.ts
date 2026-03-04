@@ -7,3 +7,5 @@ export { default as RoleList } from "./RoleList";
 export { default as RoleDialog } from "./RoleDialog";
 export { default as UserList } from "./UserList";
 export { default as UserDialog } from "./UserDialog";
+export { default as UserActivationList } from "./UserActivationList";
+export { default as UserActivationDialog } from "./UserActivationDialog";
