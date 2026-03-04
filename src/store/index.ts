@@ -90,22 +90,30 @@ export const useAuthStore = create<AuthState>()(
             return false
           }
 
+          // Normalize email to lowercase (matches signup)
+          const normalizedEmail = email.toLowerCase().trim()
+          
+          console.log('Login attempt with email:', normalizedEmail)
+          console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
+
           const { data, error: authError } = await supabase.auth.signInWithPassword({
-            email,
+            email: normalizedEmail,
             password,
           })
 
           if (authError) {
+            console.error('Auth error:', authError)
             set({ error: authError.message, isLoading: false })
             return false
           }
 
           if (data.user) {
+            console.log('Login successful for user:', data.user.id)
             const meta = data.user.user_metadata || {}
             const userData: User = {
               id: data.user.id,
-              username: meta.username || meta.display_name || email.split('@')[0],
-              email: email,
+              username: meta.username || meta.display_name || normalizedEmail.split('@')[0],
+              email: normalizedEmail,
               role: meta.role || 'user',
               profilePicture: meta.profile_picture || null,
             }
@@ -117,6 +125,7 @@ export const useAuthStore = create<AuthState>()(
           set({ error: 'Login failed', isLoading: false })
           return false
         } catch (error) {
+          console.error('Login exception:', error)
           const message = error instanceof Error ? error.message : 'An error occurred during login'
           set({ error: message, isLoading: false })
           return false

@@ -74,10 +74,26 @@ const Register = () => {
       }
 
       if (authData.user) {
-        setSuccess('Account created successfully! Redirecting to login...')
+        // Auto-confirm: Immediately sign in the user after signup
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase().trim(),
+          password,
+        })
+
+        if (signInError) {
+          console.error('Auto-login error:', signInError)
+          setSuccess('Account created! Please log in manually.')
+          setTimeout(() => {
+            navigate('/login')
+          }, 2000)
+          return
+        }
+
+        // Auto-login successful
+        setSuccess('Account created and logged in! Redirecting to dashboard...')
         setTimeout(() => {
-          navigate('/login')
-        }, 2000)
+          navigate('/dashboard')
+        }, 1500)
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred during registration'

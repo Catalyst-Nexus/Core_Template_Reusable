@@ -102,8 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'Supabase is not configured' }
       }
 
+      // Normalize email to lowercase (matches signup)
+      const normalizedEmail = email.toLowerCase().trim()
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       })
 
@@ -115,8 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const meta = data.user.user_metadata || {}
         const userData: User = {
           id: data.user.id,
-          username: meta.username || meta.display_name || email.split('@')[0],
-          email: email,
+          username: meta.username || meta.display_name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
           role: meta.role || 'user',
         }
 
