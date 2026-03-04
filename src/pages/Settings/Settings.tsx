@@ -1,5 +1,22 @@
-import { useSettings } from '../../contexts/SettingsContext'
-import './Settings.css'
+import { useSettingsStore } from '@/store'
+import { cn } from '@/lib/utils'
+import {
+  Search,
+  Palette,
+  Sun,
+  Moon,
+  Sparkles,
+  Type,
+  AlignJustify,
+  Shield,
+  LogOut,
+  Eye,
+  History,
+  Info,
+  Monitor,
+} from 'lucide-react'
+import * as Switch from '@radix-ui/react-switch'
+import * as Select from '@radix-ui/react-select'
 
 const Settings = () => {
   const {
@@ -17,268 +34,320 @@ const Settings = () => {
     setAutoLogout,
     setHighContrast,
     setReducedMotion,
-  } = useSettings()
+  } = useSettingsStore()
 
-  const currentDate = new Date().toLocaleDateString('en-US', { 
-    month: 'numeric', 
-    day: 'numeric', 
-    year: 'numeric' 
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
   })
 
   const getBrowserName = () => {
     const userAgent = navigator.userAgent
-    if (userAgent.includes('Edg')) return 'Edg'
-    if (userAgent.includes('Chrome')) return 'Chrome'
-    if (userAgent.includes('Firefox')) return 'Firefox'
+    if (userAgent.includes('Edg')) return 'Microsoft Edge'
+    if (userAgent.includes('Chrome')) return 'Google Chrome'
+    if (userAgent.includes('Firefox')) return 'Mozilla Firefox'
     if (userAgent.includes('Safari')) return 'Safari'
-    return 'Unknown'
+    return 'Unknown Browser'
   }
 
   return (
-    <div className="settings">
-      <div className="page-header">
-        <h1 className="page-title">Settings</h1>
-        <p className="page-description">Manage your application preferences</p>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-primary">Settings</h1>
+        <p className="text-sm text-muted mt-1">Manage your application preferences</p>
       </div>
 
-      <div className="settings-content">
-        {/* Search Bar */}
-        <div className="settings-search">
-          <span className="settings-search-icon">🔍</span>
+      <div className="space-y-6">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             type="text"
-            className="settings-search-input"
-            placeholder="Search..."
-            aria-label="Search settings"
+            className="w-full pl-11 pr-4 py-3 border border-border rounded-xl text-sm bg-surface text-foreground placeholder:text-muted focus:outline-none focus:border-primary"
+            placeholder="Search settings..."
           />
         </div>
 
         {/* Appearance Section */}
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <div className="settings-section-icon settings-icon-appearance">
-              🎨
+        <section className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 p-5 border-b border-border">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 text-purple-600">
+              <Palette className="w-5 h-5" />
             </div>
-            <h2 className="settings-section-title">Appearance</h2>
+            <h2 className="text-lg font-semibold text-primary">Appearance</h2>
           </div>
 
-          <div className="settings-list">
+          <div className="divide-y divide-border">
             {/* Dark Mode */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-dark">
-                  ☀️
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 text-amber-600">
+                  {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">Dark Mode</h3>
-                  <p className="settings-item-description">Switch to dark theme</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Dark Mode</h3>
+                  <p className="text-xs text-muted mt-0.5">Switch to dark theme</p>
                 </div>
               </div>
-              <label className="settings-toggle">
-                <input
-                  type="checkbox"
-                  checked={darkMode}
-                  onChange={(e) => setDarkMode(e.target.checked)}
-                  aria-label="Dark Mode"
+              <Switch.Root
+                checked={darkMode}
+                onCheckedChange={setDarkMode}
+                className={cn(
+                  'w-11 h-6 rounded-full transition-colors relative',
+                  darkMode ? 'bg-success' : 'bg-border'
+                )}
+              >
+                <Switch.Thumb
+                  className={cn(
+                    'block w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    darkMode ? 'translate-x-5.5' : 'translate-x-0.5'
+                  )}
                 />
-                <span className="settings-toggle-slider"></span>
-              </label>
+              </Switch.Root>
             </div>
 
             {/* Compact Mode */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-compact">
-                  ✨
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-pink-100 text-pink-600">
+                  <Sparkles className="w-5 h-5" />
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">Compact Mode</h3>
-                  <p className="settings-item-description">Reduce spacing and padding for more content</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Compact Mode</h3>
+                  <p className="text-xs text-muted mt-0.5">Reduce spacing and padding for more content</p>
                 </div>
               </div>
-              <label className="settings-toggle">
-                <input
-                  type="checkbox"
-                  checked={compactMode}
-                  onChange={(e) => setCompactMode(e.target.checked)}
-                  aria-label="Compact Mode"
+              <Switch.Root
+                checked={compactMode}
+                onCheckedChange={setCompactMode}
+                className={cn(
+                  'w-11 h-6 rounded-full transition-colors relative',
+                  compactMode ? 'bg-success' : 'bg-border'
+                )}
+              >
+                <Switch.Thumb
+                  className={cn(
+                    'block w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    compactMode ? 'translate-x-5.5' : 'translate-x-0.5'
+                  )}
                 />
-                <span className="settings-toggle-slider"></span>
-              </label>
+              </Switch.Root>
             </div>
 
             {/* Font Size */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-font">
-                  T
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 text-blue-600">
+                  <Type className="w-5 h-5" />
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">Font Size</h3>
-                  <p className="settings-item-description">Adjust text size across the application</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Font Size</h3>
+                  <p className="text-xs text-muted mt-0.5">Adjust text size across the application</p>
                 </div>
               </div>
-              <select
-                className="settings-select"
-                value={fontSize}
-                onChange={(e) => setFontSize(e.target.value as 'small' | 'medium' | 'large')}
-                aria-label="Font Size"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
+              <Select.Root value={fontSize} onValueChange={(v) => setFontSize(v as 'small' | 'medium' | 'large')}>
+                <Select.Trigger className="inline-flex items-center justify-between gap-2 px-4 py-2 min-w-32 border border-border rounded-lg text-sm font-medium bg-background text-foreground hover:bg-border/50 transition-colors">
+                  <Select.Value />
+                  <Select.Icon />
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Content className="bg-surface border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                    <Select.Viewport className="p-1">
+                      <Select.Item value="small" className="px-3 py-2 text-sm text-foreground rounded cursor-pointer hover:bg-background outline-none">
+                        <Select.ItemText>Small</Select.ItemText>
+                      </Select.Item>
+                      <Select.Item value="medium" className="px-3 py-2 text-sm text-foreground rounded cursor-pointer hover:bg-background outline-none">
+                        <Select.ItemText>Medium</Select.ItemText>
+                      </Select.Item>
+                      <Select.Item value="large" className="px-3 py-2 text-sm text-foreground rounded cursor-pointer hover:bg-background outline-none">
+                        <Select.ItemText>Large</Select.ItemText>
+                      </Select.Item>
+                    </Select.Viewport>
+                  </Select.Content>
+                </Select.Portal>
+              </Select.Root>
             </div>
 
             {/* Table Density */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-table">
-                  ☰
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 text-green-600">
+                  <AlignJustify className="w-5 h-5" />
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">Table Density</h3>
-                  <p className="settings-item-description">Control row spacing in tables</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Table Density</h3>
+                  <p className="text-xs text-muted mt-0.5">Control row spacing in tables</p>
                 </div>
               </div>
-              <select
-                className="settings-select"
-                value={tableDensity}
-                onChange={(e) => setTableDensity(e.target.value as 'comfortable' | 'standard' | 'compact')}
-                aria-label="Table Density"
-              >
-                <option value="comfortable">Comfortable</option>
-                <option value="standard">Standard</option>
-                <option value="compact">Compact</option>
-              </select>
+              <Select.Root value={tableDensity} onValueChange={(v) => setTableDensity(v as 'comfortable' | 'standard' | 'compact')}>
+                <Select.Trigger className="inline-flex items-center justify-between gap-2 px-4 py-2 min-w-32 border border-border rounded-lg text-sm font-medium bg-background text-foreground hover:bg-border/50 transition-colors">
+                  <Select.Value />
+                  <Select.Icon />
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Content className="bg-surface border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                    <Select.Viewport className="p-1">
+                      <Select.Item value="comfortable" className="px-3 py-2 text-sm text-foreground rounded cursor-pointer hover:bg-background outline-none">
+                        <Select.ItemText>Comfortable</Select.ItemText>
+                      </Select.Item>
+                      <Select.Item value="standard" className="px-3 py-2 text-sm text-foreground rounded cursor-pointer hover:bg-background outline-none">
+                        <Select.ItemText>Standard</Select.ItemText>
+                      </Select.Item>
+                      <Select.Item value="compact" className="px-3 py-2 text-sm text-foreground rounded cursor-pointer hover:bg-background outline-none">
+                        <Select.ItemText>Compact</Select.ItemText>
+                      </Select.Item>
+                    </Select.Viewport>
+                  </Select.Content>
+                </Select.Portal>
+              </Select.Root>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Session & Security Section */}
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <div className="settings-section-icon settings-icon-security">
-              🛡️
+        <section className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 p-5 border-b border-border">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-red-100 text-red-600">
+              <Shield className="w-5 h-5" />
             </div>
-            <h2 className="settings-section-title">Session & Security</h2>
+            <h2 className="text-lg font-semibold text-primary">Session & Security</h2>
           </div>
 
-          <div className="settings-list">
+          <div className="divide-y divide-border">
             {/* Auto Logout */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-logout">
-                  🚪
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-100 text-orange-600">
+                  <LogOut className="w-5 h-5" />
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">Auto Logout</h3>
-                  <p className="settings-item-description">Automatically log out after 15 minutes of inactivity</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Auto Logout</h3>
+                  <p className="text-xs text-muted mt-0.5">Automatically log out after 15 minutes of inactivity</p>
                 </div>
               </div>
-              <label className="settings-toggle">
-                <input
-                  type="checkbox"
-                  checked={autoLogout}
-                  onChange={(e) => setAutoLogout(e.target.checked)}
-                  aria-label="Auto Logout"
+              <Switch.Root
+                checked={autoLogout}
+                onCheckedChange={setAutoLogout}
+                className={cn(
+                  'w-11 h-6 rounded-full transition-colors relative',
+                  autoLogout ? 'bg-success' : 'bg-border'
+                )}
+              >
+                <Switch.Thumb
+                  className={cn(
+                    'block w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    autoLogout ? 'translate-x-5.5' : 'translate-x-0.5'
+                  )}
                 />
-                <span className="settings-toggle-slider"></span>
-              </label>
+              </Switch.Root>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Accessibility Section */}
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <div className="settings-section-icon settings-icon-accessibility">
-              ♿
+        <section className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 p-5 border-b border-border">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600">
+              <Eye className="w-5 h-5" />
             </div>
-            <h2 className="settings-section-title">Accessibility</h2>
+            <h2 className="text-lg font-semibold text-primary">Accessibility</h2>
           </div>
 
-          <div className="settings-list">
+          <div className="divide-y divide-border">
             {/* High Contrast */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-contrast">
-                  💡
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-yellow-100 text-yellow-600">
+                  <Eye className="w-5 h-5" />
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">High Contrast</h3>
-                  <p className="settings-item-description">Increase color contrast for better visibility</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">High Contrast</h3>
+                  <p className="text-xs text-muted mt-0.5">Increase color contrast for better visibility</p>
                 </div>
               </div>
-              <label className="settings-toggle">
-                <input
-                  type="checkbox"
-                  checked={highContrast}
-                  onChange={(e) => setHighContrast(e.target.checked)}
-                  aria-label="High Contrast"
+              <Switch.Root
+                checked={highContrast}
+                onCheckedChange={setHighContrast}
+                className={cn(
+                  'w-11 h-6 rounded-full transition-colors relative',
+                  highContrast ? 'bg-success' : 'bg-border'
+                )}
+              >
+                <Switch.Thumb
+                  className={cn(
+                    'block w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    highContrast ? 'translate-x-5.5' : 'translate-x-0.5'
+                  )}
                 />
-                <span className="settings-toggle-slider"></span>
-              </label>
+              </Switch.Root>
             </div>
 
             {/* Reduced Motion */}
-            <div className="settings-item">
-              <div className="settings-item-left">
-                <div className="settings-item-icon settings-icon-motion">
-                  ⏸
+            <div className="flex items-center justify-between p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-cyan-100 text-cyan-600">
+                  <History className="w-5 h-5" />
                 </div>
-                <div className="settings-item-info">
-                  <h3 className="settings-item-title">Reduced Motion</h3>
-                  <p className="settings-item-description">Minimize animations and transitions</p>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Reduced Motion</h3>
+                  <p className="text-xs text-muted mt-0.5">Minimize animations and transitions</p>
                 </div>
               </div>
-              <label className="settings-toggle">
-                <input
-                  type="checkbox"
-                  checked={reducedMotion}
-                  onChange={(e) => setReducedMotion(e.target.checked)}
-                  aria-label="Reduced Motion"
+              <Switch.Root
+                checked={reducedMotion}
+                onCheckedChange={setReducedMotion}
+                className={cn(
+                  'w-11 h-6 rounded-full transition-colors relative',
+                  reducedMotion ? 'bg-success' : 'bg-border'
+                )}
+              >
+                <Switch.Thumb
+                  className={cn(
+                    'block w-5 h-5 bg-white rounded-full shadow transition-transform',
+                    reducedMotion ? 'translate-x-5.5' : 'translate-x-0.5'
+                  )}
                 />
-                <span className="settings-toggle-slider"></span>
-              </label>
+              </Switch.Root>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* System Information Section */}
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <div className="settings-section-icon settings-icon-info">
-              ℹ️
+        <section className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 p-5 border-b border-border">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 text-gray-600">
+              <Info className="w-5 h-5" />
             </div>
-            <h2 className="settings-section-title">System Information</h2>
+            <h2 className="text-lg font-semibold text-primary">System Information</h2>
           </div>
 
-          <div className="settings-list">
-            <div className="settings-info-row">
-              <span className="settings-info-label">Current Theme</span>
-              <span className="settings-info-value">
-                <span className="settings-info-icon">{darkMode ? '🌙' : '☀️'}</span>
+          <div className="divide-y divide-border">
+            <div className="flex items-center justify-between p-5">
+              <span className="text-sm text-muted">Current Theme</span>
+              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                {darkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                 {darkMode ? 'Dark Mode' : 'Light Mode'}
               </span>
             </div>
-
-            <div className="settings-info-row">
-              <span className="settings-info-label">Application Version</span>
-              <span className="settings-info-value">v1.0.0</span>
+            <div className="flex items-center justify-between p-5">
+              <span className="text-sm text-muted">Application Version</span>
+              <span className="text-sm font-medium text-foreground">v2.0.0</span>
             </div>
-
-            <div className="settings-info-row">
-              <span className="settings-info-label">Last Updated</span>
-              <span className="settings-info-value">{currentDate}</span>
+            <div className="flex items-center justify-between p-5">
+              <span className="text-sm text-muted">Last Updated</span>
+              <span className="text-sm font-medium text-foreground">{currentDate}</span>
             </div>
-
-            <div className="settings-info-row">
-              <span className="settings-info-label">Browser</span>
-              <span className="settings-info-value">{getBrowserName()}</span>
+            <div className="flex items-center justify-between p-5">
+              <span className="text-sm text-muted">Browser</span>
+              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Monitor className="w-4 h-4" />
+                {getBrowserName()}
+              </span>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )

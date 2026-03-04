@@ -1,228 +1,91 @@
-import {
-  HiOutlineUserAdd,
-  HiOutlineUserCircle,
-  HiOutlineMail,
-  HiOutlineShieldCheck,
-  HiOutlineCheckCircle,
-  HiOutlineXCircle,
-  HiOutlineLockClosed,
-} from "react-icons/hi";
-import type { ActivationUser } from "./UserActivationList";
-import "./UserActivationDialog.css";
+import * as Dialog from '@radix-ui/react-dialog'
+import { X, Check, XCircle } from 'lucide-react'
+
+interface PendingUser {
+  id: string
+  name: string
+  email: string
+  requestedAt: string
+}
 
 interface UserActivationDialogProps {
-  mode: "add" | "edit";
-  open: boolean;
-  onClose: () => void;
-  editingUser?: ActivationUser | null;
+  open: boolean
+  onClose: () => void
+  user: PendingUser | null
+  onActivate: () => void
+  onReject: () => void
 }
 
 const UserActivationDialog = ({
-  mode,
   open,
   onClose,
-  editingUser,
+  user,
+  onActivate,
+  onReject,
 }: UserActivationDialogProps) => {
-  if (!open) return null;
-
-  const isEdit = mode === "edit" && editingUser;
+  if (!user) return null
 
   return (
-    <div className="uad-overlay" onClick={onClose}>
-      <div className="uad-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Banner */}
-        <div className="uad-banner">
-          <div className="uad-banner-avatar">
-            {isEdit ? (
-              editingUser.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2)
-            ) : (
-              <HiOutlineUserAdd />
-            )}
+    <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface border border-border rounded-xl p-6 w-full max-w-md z-50 shadow-lg">
+          <div className="flex items-center justify-between mb-6">
+            <Dialog.Title className="text-lg font-semibold text-foreground">
+              User Activation
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <button
+                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-muted/10 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </Dialog.Close>
           </div>
-          <div className="uad-banner-info">
-            <h2 className="uad-banner-title">
-              {isEdit ? editingUser.name : "Add New User"}
-            </h2>
-            <p className="uad-banner-subtitle">
-              {isEdit ? editingUser.email : "Create a new user account"}
+
+          <div className="space-y-4 mb-6">
+            <p className="text-sm text-muted">
+              Review the following user registration request:
             </p>
+            <div className="bg-muted/5 border border-border rounded-lg p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted">Name:</span>
+                <span className="text-sm font-medium text-foreground">{user.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted">Email:</span>
+                <span className="text-sm font-medium text-foreground">{user.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted">Requested:</span>
+                <span className="text-sm font-medium text-foreground">{user.requestedAt}</span>
+              </div>
+            </div>
           </div>
-          <button className="uad-close-btn" onClick={onClose}>
-            <HiOutlineXCircle />
-          </button>
-        </div>
 
-        <form className="uad-form">
-          {isEdit ? (
-            <>
-              <p className="uad-section-label">Account Info</p>
-              <div className="uad-form-group">
-                <label className="uad-label">Full Name</label>
-                <div className="uad-input-wrap">
-                  <HiOutlineUserCircle className="uad-input-icon" />
-                  <input
-                    className="uad-input"
-                    type="text"
-                    defaultValue={editingUser.name}
-                  />
-                </div>
-              </div>
-              <div className="uad-form-group">
-                <label className="uad-label">Email Address</label>
-                <div className="uad-input-wrap">
-                  <HiOutlineMail className="uad-input-icon" />
-                  <input
-                    className="uad-input"
-                    type="email"
-                    defaultValue={editingUser.email}
-                  />
-                </div>
-              </div>
-              <p className="uad-section-label">Permissions</p>
-              <div className="uad-form-row">
-                <div className="uad-form-group">
-                  <label className="uad-label">Role</label>
-                  <div className="uad-input-wrap">
-                    <HiOutlineShieldCheck className="uad-input-icon" />
-                    <select
-                      className="uad-input"
-                      defaultValue={editingUser.role}
-                    >
-                      <option>Admin</option>
-                      <option>Manager</option>
-                      <option>User</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="uad-form-group">
-                  <label className="uad-label">Status</label>
-                  <div className="uad-input-wrap">
-                    <HiOutlineCheckCircle className="uad-input-icon" />
-                    <select
-                      className="uad-input"
-                      defaultValue={editingUser.status}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="uad-section-label">Personal Information</p>
-              <div className="uad-form-row">
-                <div className="uad-form-group">
-                  <label className="uad-label">First Name</label>
-                  <div className="uad-input-wrap">
-                    <HiOutlineUserCircle className="uad-input-icon" />
-                    <input
-                      className="uad-input"
-                      type="text"
-                      placeholder="Enter first name"
-                    />
-                  </div>
-                </div>
-                <div className="uad-form-group">
-                  <label className="uad-label">Last Name</label>
-                  <div className="uad-input-wrap">
-                    <HiOutlineUserCircle className="uad-input-icon" />
-                    <input
-                      className="uad-input"
-                      type="text"
-                      placeholder="Enter last name"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="uad-form-group">
-                <label className="uad-label">Email Address</label>
-                <div className="uad-input-wrap">
-                  <HiOutlineMail className="uad-input-icon" />
-                  <input
-                    className="uad-input"
-                    type="email"
-                    placeholder="Enter email address"
-                  />
-                </div>
-              </div>
-              <p className="uad-section-label">Account Settings</p>
-              <div className="uad-form-row">
-                <div className="uad-form-group">
-                  <label className="uad-label">Role</label>
-                  <div className="uad-input-wrap">
-                    <HiOutlineShieldCheck className="uad-input-icon" />
-                    <select className="uad-input" defaultValue="User">
-                      <option>Admin</option>
-                      <option>Manager</option>
-                      <option>User</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="uad-form-group">
-                  <label className="uad-label">Status</label>
-                  <div className="uad-input-wrap">
-                    <HiOutlineCheckCircle className="uad-input-icon" />
-                    <select className="uad-input" defaultValue="active">
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="uad-form-group">
-                <label className="uad-label">Temporary Password</label>
-                <div className="uad-input-wrap">
-                  <HiOutlineLockClosed className="uad-input-icon" />
-                  <input
-                    className="uad-input"
-                    type="password"
-                    placeholder="Enter temporary password"
-                  />
-                </div>
-                <span className="uad-hint">
-                  User will be prompted to change this on first login
-                </span>
-              </div>
-            </>
-          )}
-
-          <div className="uad-footer">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
-              className="uad-btn uad-btn-cancel"
-              onClick={onClose}
+              onClick={onReject}
+              className="px-4 py-2 rounded-lg flex items-center gap-2 border border-danger text-danger hover:bg-danger/10 transition-colors"
             >
-              Cancel
+              <XCircle className="w-4 h-4" />
+              Reject
             </button>
             <button
               type="button"
-              className="uad-btn uad-btn-submit"
-              onClick={onClose}
+              onClick={onActivate}
+              className="px-4 py-2 rounded-lg flex items-center gap-2 bg-success text-white hover:bg-success/90 transition-colors"
             >
-              {isEdit ? (
-                <>
-                  <HiOutlineCheckCircle />
-                  Save Changes
-                </>
-              ) : (
-                <>
-                  <HiOutlineUserAdd />
-                  Create User
-                </>
-              )}
+              <Check className="w-4 h-4" />
+              Activate
             </button>
           </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
 
-export default UserActivationDialog;
+export default UserActivationDialog

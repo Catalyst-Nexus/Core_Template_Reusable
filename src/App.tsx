@@ -1,31 +1,48 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
-import { SettingsProvider } from './contexts/SettingsContext'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
+import { useEffect } from 'react'
+import { useSettingsStore } from './store'
 import Login from './pages/Login/Login'
 import Dashboard from './pages/Dashboard/Dashboard'
 import PrivateRoute from './components/PrivateRoute'
-import './App.css'
 
 function App() {
+  const { darkMode, highContrast, reducedMotion, fontSize } = useSettingsStore()
+
+  // Apply settings to document root
+  useEffect(() => {
+    const root = document.documentElement
+
+    // Dark mode
+    root.classList.toggle('dark', darkMode)
+    
+    // High contrast
+    root.classList.toggle('high-contrast', highContrast)
+    
+    // Reduced motion
+    root.classList.toggle('reduced-motion', reducedMotion)
+    
+    // Font size
+    root.classList.remove('font-small', 'font-medium', 'font-large')
+    root.classList.add(`font-${fontSize}`)
+  }, [darkMode, highContrast, reducedMotion, fontSize])
+
   return (
-    <AuthProvider>
-      <Router>
-        <SettingsProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/dashboard/*"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </SettingsProvider>
-      </Router>
-    </AuthProvider>
+    <BrowserRouter>
+      <div className="min-h-screen w-full bg-background text-foreground">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/dashboard/*"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
 

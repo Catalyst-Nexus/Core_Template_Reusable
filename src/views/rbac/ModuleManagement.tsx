@@ -1,107 +1,60 @@
-import { useState } from "react";
-import { ModuleList, ModuleDialog } from "../../components/rbac";
-import "./ModuleManagement.css";
-
-// ─── Magic UI: ShineBorder ───────────────────────
-const ShineBorder = ({
-  shineColor = ["#22c55e", "#16a34a"],
-  borderWidth = 1,
-  duration = 10,
-}: {
-  shineColor?: string | string[];
-  borderWidth?: number;
-  duration?: number;
-}) => (
-  <span
-    className="mmv-shine-border"
-    style={{
-      ["--border-width" as string]: `${borderWidth}px`,
-      ["--duration" as string]: `${duration}s`,
-      backgroundImage: `radial-gradient(transparent, transparent, ${
-        Array.isArray(shineColor) ? shineColor.join(",") : shineColor
-      }, transparent, transparent)`,
-    }}
-  />
-);
-// ─────────────────────────────────────────────────
+import { useState } from 'react'
+import { ModuleList, ModuleDialog } from '@/components/rbac'
+import { PageHeader, StatsRow, StatCard, ActionsBar, PrimaryButton } from '@/components/ui'
+import { Blocks, Plus } from 'lucide-react'
 
 interface Module {
-  id: string;
-  description: string;
-  status: "active" | "inactive";
-  createdAt: string;
+  id: string
+  description: string
+  status: 'active' | 'inactive'
+  createdAt: string
 }
 
 const ModuleManagement = () => {
-  const [modules] = useState<Module[]>([]);
-  const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [description, setDescription] = useState("");
+  const [modules] = useState<Module[]>([])
+  const [search, setSearch] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [description, setDescription] = useState('')
 
   const handleCreate = () => {
     // TODO: wire up to API
-    setDescription("");
-    setShowModal(false);
-  };
+    setDescription('')
+    setShowModal(false)
+  }
 
-  const total = modules.length;
-  const active = modules.filter((m) => m.status === "active").length;
-  const inactive = modules.filter((m) => m.status === "inactive").length;
+  const total = modules.length
+  const active = modules.filter((m) => m.status === 'active').length
+  const inactive = modules.filter((m) => m.status === 'inactive').length
 
   return (
-    <div className="mmv-page">
-      {/* Page Header */}
-      <div className="mmv-page-header">
-        <h1 className="mmv-page-title">Module Management</h1>
-        <p className="mmv-page-subtitle">
-          Manage modules in your role-based access control system
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Module Management"
+        subtitle="Manage modules in your role-based access control system"
+        icon={<Blocks className="w-6 h-6" />}
+      />
 
-      {/* Stat Cards */}
-      <div className="mmv-stats-row">
-        <div className="mmv-stat-card">
-          <ShineBorder />
-          <span className="mmv-stat-label">Total Modules</span>
-          <span className="mmv-stat-value">{total}</span>
-        </div>
-        <div className="mmv-stat-card">
-          <ShineBorder shineColor={["#22c55e", "#4ade80"]} />
-          <span className="mmv-stat-label">Active Status</span>
-          <span className="mmv-stat-value mmv-val-green">{active}</span>
-        </div>
-        <div className="mmv-stat-card">
-          <ShineBorder shineColor={["#f97316", "#fb923c"]} />
-          <span className="mmv-stat-label">Inactive Status</span>
-          <span className="mmv-stat-value mmv-val-orange">{inactive}</span>
-        </div>
-      </div>
+      <StatsRow>
+        <StatCard label="Total Modules" value={total} />
+        <StatCard label="Active Status" value={active} color="success" />
+        <StatCard label="Inactive Status" value={inactive} color="warning" />
+      </StatsRow>
 
-      {/* Add Button */}
-      <div className="mmv-actions-bar">
-        <button className="mmv-add-btn" onClick={() => setShowModal(true)}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path
-              d="M7 1v12M1 7h12"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+      <ActionsBar>
+        <PrimaryButton onClick={() => setShowModal(true)}>
+          <Plus className="w-4 h-4" />
           Add Module
-        </button>
-      </div>
+        </PrimaryButton>
+      </ActionsBar>
 
-      {/* List Component */}
       <ModuleList
         modules={modules}
         search={search}
         onSearchChange={setSearch}
-        onEdit={(m: Module) => console.log("Edit", m)}
-        onDelete={(id: string) => console.log("Delete", id)}
+        onEdit={(m) => console.log('Edit', m)}
+        onDelete={(id) => console.log('Delete', id)}
       />
 
-      {/* Dialog Component */}
       <ModuleDialog
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -110,7 +63,7 @@ const ModuleManagement = () => {
         onDescriptionChange={setDescription}
       />
     </div>
-  );
-};
+  )
+}
 
-export default ModuleManagement;
+export default ModuleManagement

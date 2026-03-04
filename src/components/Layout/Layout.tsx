@@ -1,21 +1,46 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 import Sidebar from '../Sidebar/Sidebar'
 import Header from '../Header/Header'
-import './Layout.css'
+import { useSettingsStore } from '@/store'
+import { cn } from '@/lib/utils'
 
 interface LayoutProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout = ({ children }: LayoutProps) => {
+  const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed)
+  const compactMode = useSettingsStore((state) => state.compactMode)
+
   return (
-    <div className="layout">
-      <div className="layout-sidebar">
+    <div className="flex w-full min-h-screen bg-background">
+      {/* Sidebar */}
+      <div
+        className={cn(
+          'fixed left-0 top-0 min-h-screen overflow-y-auto z-40 transition-all duration-300',
+          'bg-surface border-r border-border shadow-sm',
+          sidebarCollapsed ? 'w-16' : 'w-64'
+        )}
+      >
         <Sidebar />
       </div>
-      <div className="layout-main">
+
+      {/* Main Content Area */}
+      <div
+        className={cn(
+          'flex-1 min-h-screen transition-all duration-300',
+          sidebarCollapsed ? 'ml-16' : 'ml-64'
+        )}
+      >
         <Header />
-        <div className="layout-content">{children}</div>
+        <main
+          className={cn(
+            'max-w-7xl',
+            compactMode ? 'p-4' : 'p-6 lg:p-8'
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   )

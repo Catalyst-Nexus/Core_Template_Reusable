@@ -1,107 +1,60 @@
-import { useState } from "react";
-import { AssignmentList, AssignmentDialog } from "../../components/rbac";
-import "./AssignmentManagement.css";
-
-// ─── Magic UI: ShineBorder ───────────────────────
-const ShineBorder = ({
-  shineColor = ["#22c55e", "#16a34a"],
-  borderWidth = 1,
-  duration = 10,
-}: {
-  shineColor?: string | string[];
-  borderWidth?: number;
-  duration?: number;
-}) => (
-  <span
-    className="amv-shine-border"
-    style={{
-      ["--border-width" as string]: `${borderWidth}px`,
-      ["--duration" as string]: `${duration}s`,
-      backgroundImage: `radial-gradient(transparent, transparent, ${
-        Array.isArray(shineColor) ? shineColor.join(",") : shineColor
-      }, transparent, transparent)`,
-    }}
-  />
-);
-// ─────────────────────────────────────────────────
+import { useState } from 'react'
+import { AssignmentList, AssignmentDialog } from '@/components/rbac'
+import { PageHeader, StatsRow, StatCard, ActionsBar, PrimaryButton } from '@/components/ui'
+import { ClipboardList, Plus } from 'lucide-react'
 
 interface Assignment {
-  id: string;
-  description: string;
-  status: "active" | "inactive";
-  createdAt: string;
+  id: string
+  description: string
+  status: 'active' | 'inactive'
+  createdAt: string
 }
 
 const AssignmentManagement = () => {
-  const [assignments] = useState<Assignment[]>([]);
-  const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [description, setDescription] = useState("");
+  const [assignments] = useState<Assignment[]>([])
+  const [search, setSearch] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [description, setDescription] = useState('')
 
   const handleCreate = () => {
     // TODO: wire up to API
-    setDescription("");
-    setShowModal(false);
-  };
+    setDescription('')
+    setShowModal(false)
+  }
 
-  const total = assignments.length;
-  const active = assignments.filter((a) => a.status === "active").length;
-  const inactive = assignments.filter((a) => a.status === "inactive").length;
+  const total = assignments.length
+  const active = assignments.filter((a) => a.status === 'active').length
+  const inactive = assignments.filter((a) => a.status === 'inactive').length
 
   return (
-    <div className="amv-page">
-      {/* Page Header */}
-      <div className="amv-page-header">
-        <h1 className="amv-page-title">Assignment Management</h1>
-        <p className="amv-page-subtitle">
-          Manage assignments in your role-based access control system
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Assignment Management"
+        subtitle="Manage assignments in your role-based access control system"
+        icon={<ClipboardList className="w-6 h-6" />}
+      />
 
-      {/* Stat Cards */}
-      <div className="amv-stats-row">
-        <div className="amv-stat-card">
-          <ShineBorder />
-          <span className="amv-stat-label">Total Assignments</span>
-          <span className="amv-stat-value">{total}</span>
-        </div>
-        <div className="amv-stat-card">
-          <ShineBorder shineColor={["#22c55e", "#4ade80"]} />
-          <span className="amv-stat-label">Active Status</span>
-          <span className="amv-stat-value amv-val-green">{active}</span>
-        </div>
-        <div className="amv-stat-card">
-          <ShineBorder shineColor={["#f97316", "#fb923c"]} />
-          <span className="amv-stat-label">Inactive Status</span>
-          <span className="amv-stat-value amv-val-orange">{inactive}</span>
-        </div>
-      </div>
+      <StatsRow>
+        <StatCard label="Total Assignments" value={total} />
+        <StatCard label="Active Status" value={active} color="success" />
+        <StatCard label="Inactive Status" value={inactive} color="warning" />
+      </StatsRow>
 
-      {/* Add Button */}
-      <div className="amv-actions-bar">
-        <button className="amv-add-btn" onClick={() => setShowModal(true)}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path
-              d="M7 1v12M1 7h12"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+      <ActionsBar>
+        <PrimaryButton onClick={() => setShowModal(true)}>
+          <Plus className="w-4 h-4" />
           Add Assignment
-        </button>
-      </div>
+        </PrimaryButton>
+      </ActionsBar>
 
-      {/* List Component */}
       <AssignmentList
         assignments={assignments}
         search={search}
         onSearchChange={setSearch}
-        onEdit={(a: Assignment) => console.log("Edit", a)}
-        onDelete={(id: string) => console.log("Delete", id)}
+        onEdit={(a) => console.log('Edit', a)}
+        onDelete={(id) => console.log('Delete', id)}
       />
 
-      {/* Dialog Component */}
       <AssignmentDialog
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -110,7 +63,7 @@ const AssignmentManagement = () => {
         onDescriptionChange={setDescription}
       />
     </div>
-  );
-};
+  )
+}
 
-export default AssignmentManagement;
+export default AssignmentManagement
