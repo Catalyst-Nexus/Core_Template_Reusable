@@ -143,14 +143,14 @@ export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Super admin has access to all modules
-      if (user.is_super_admin) {
+      if (isSuperAdmin) {
         setUserModules(allModules)
         setUserPermissions([])
         setIsLoading(false)
         return
       }
 
-      // Regular user: fetch based on role permissions
+      // Fetch user permissions and accessible modules based on role permissions
       const { permissions, moduleIds } = await fetchUserPermissions()
       setUserPermissions(permissions)
 
@@ -162,7 +162,7 @@ export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false)
     }
-  }, [user, fetchAllModules, fetchUserPermissions])
+  }, [user, isSuperAdmin, fetchAllModules, fetchUserPermissions])
 
   // Check if user has access to a module (by id or route_path)
   const hasModuleAccess = useCallback(
