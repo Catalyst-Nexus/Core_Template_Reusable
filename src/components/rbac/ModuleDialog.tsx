@@ -70,7 +70,7 @@ const ModuleDialog = ({
       <FormInput
         id="file-path"
         label="File Path"
-        placeholder="e.g., views/rbac/UserManagement"
+        placeholder="e.g., pages/rbac/UserManagement"
         value={filePath}
         onChange={onFilePathChange}
         required
@@ -78,11 +78,11 @@ const ModuleDialog = ({
       <div className="text-xs text-muted space-y-1 -mt-1">
         <p>Available component paths:</p>
         <ul className="list-disc list-inside ml-2 space-y-0.5">
-          <li>views/rbac/UserActivation</li>
-          <li>views/rbac/RoleManagement</li>
-          <li>views/rbac/UserManagement</li>
-          <li>views/rbac/ModuleManagement</li>
-          <li>views/rbac/FacilitiesManagement</li>
+          <li>pages/rbac/UserActivation</li>
+          <li>pages/rbac/RoleManagement</li>
+          <li>pages/rbac/UserManagement</li>
+          <li>pages/rbac/ModuleManagement</li>
+          <li>pages/rbac/FacilitiesManagement</li>
         </ul>
         <p className="italic">Register new components in Dashboard.tsx</p>
       </div>

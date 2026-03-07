@@ -384,11 +384,11 @@ const DashboardHome = () => {
 
 // Component Registry for dynamic routes
 const componentRegistry: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
-  'views/rbac/UserActivation': lazy(() => import('@/views/rbac/UserActivation')),
-  'views/rbac/RoleManagement': lazy(() => import('@/views/rbac/RoleManagement')),
-  'views/rbac/UserManagement': lazy(() => import('@/views/rbac/UserManagement')),
-  'views/rbac/ModuleManagement': lazy(() => import('@/views/rbac/ModuleManagement')),
-  'views/rbac/FacilitiesManagement': lazy(() => import('@/views/rbac/FacilitiesManagement')),
+  'pages/rbac/UserActivation': lazy(() => import('@/pages/rbac/UserActivation')),
+  'pages/rbac/RoleManagement': lazy(() => import('@/pages/rbac/RoleManagement')),
+  'pages/rbac/UserManagement': lazy(() => import('@/pages/rbac/UserManagement')),
+  'pages/rbac/ModuleManagement': lazy(() => import('@/pages/rbac/ModuleManagement')),
+  'pages/rbac/FacilitiesManagement': lazy(() => import('@/pages/rbac/FacilitiesManagement')),
   // Legacy static registry - for RBAC modules only
   // Animal modules and new modules are loaded dynamically via file path
 }
