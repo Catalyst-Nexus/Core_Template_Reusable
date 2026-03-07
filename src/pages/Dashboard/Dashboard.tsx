@@ -382,33 +382,15 @@ const DashboardHome = () => {
   )
 }
 
-// Component Registry for dynamic routes
-const componentRegistry: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
-  'views/rbac/UserActivation': lazy(() => import('@/views/rbac/UserActivation')),
-  'views/rbac/RoleManagement': lazy(() => import('@/views/rbac/RoleManagement')),
-  'views/rbac/UserManagement': lazy(() => import('@/views/rbac/UserManagement')),
-  'views/rbac/ModuleManagement': lazy(() => import('@/views/rbac/ModuleManagement')),
-  'views/rbac/FacilitiesManagement': lazy(() => import('@/views/rbac/FacilitiesManagement')),
-  // Legacy static registry - for RBAC modules only
-  // Animal modules and new modules are loaded dynamically via file path
-}
-
 const Dashboard = () => {
   const { userModules } = useRBAC()
-  
-  // Get dynamic routes from all modules
+
+  // All modules (including RBAC) are loaded dynamically
   const dynamicRoutes = userModules.map(module => {
     const basePath = module.route_path.replace(/^\/dashboard/, '')
-    const normalizedPath = module.file_path?.replace(/\\/g, '/') || ''
-    
-    // Check if this is a legacy RBAC module in the registry
-    const isLegacyModule = normalizedPath in componentRegistry
-    
     return {
       path: basePath,
-      type: isLegacyModule ? ('registry' as const) : ('dynamic' as const),
       filePath: module.file_path,
-      registryKey: normalizedPath,
     }
   })
 
@@ -418,26 +400,14 @@ const Dashboard = () => {
         <Route path="/" element={<DashboardHome />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/settings" element={<Settings />} />
-        
+
         {/* Dynamic routes from database modules */}
         {dynamicRoutes.map((route) => (
           <Route
             key={route.path}
             path={route.path}
             element={
-              route.type === 'registry' ? (
-                // Legacy module from registry
-                <Suspense fallback={<LoadingFallback />}>
-                  {(() => {
-                    const Component = componentRegistry[route.registryKey]
-                    return <Component />
-                  })()}
-                </Suspense>
-              ) : (
-                // New dynamic module loaded from file path
-                // Use filePath as key to force remount when route changes
-                <DynamicComponentLoader key={route.filePath} filePath={route.filePath || ''} />
-              )
+              <DynamicComponentLoader key={route.filePath} filePath={route.filePath || ''} />
             }
           />
         ))}
